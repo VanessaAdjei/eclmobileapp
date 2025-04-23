@@ -223,7 +223,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           }).toList(),
         )
             : Center(child: Text("No notifications")),
-        bottomNavigationBar: const CustomBottomNav(currentIndex: 0),
+        bottomNavigationBar: const CustomBottomNav(),
       ),
     );
   }

@@ -2,7 +2,6 @@ import 'package:eclapp/pages/profile.dart';
 import 'package:eclapp/pages/storelocation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:uuid/uuid.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'Cart.dart';
@@ -227,7 +226,7 @@ class _CategoryPageState extends State<CategoryPage> {
             ],
           ),
         ),
-        bottomNavigationBar: const CustomBottomNav(currentIndex: 2),
+        bottomNavigationBar: const CustomBottomNav(),
       ),
     );
   }
@@ -338,6 +337,7 @@ class _SubcategoryPageState extends State<SubcategoryPage> {
     super.initState();
     _fetchSubcategories();
   }
+
   Future<void> _fetchSubcategories() async {
     try {
       final response = await http.get(
@@ -352,8 +352,9 @@ class _SubcategoryPageState extends State<SubcategoryPage> {
             _isLoading = false;
           });
 
-          if (_subcategories.isNotEmpty && _subcategories[0]['has_product_categories'] == false) {
-            _fetchProducts(widget.categoryId);
+          // If there are subcategories, select the first one by default
+          if (_subcategories.isNotEmpty) {
+            _onSubcategorySelected(_subcategories[0]['id']);
           }
         } else {
           setState(() {
@@ -375,14 +376,16 @@ class _SubcategoryPageState extends State<SubcategoryPage> {
     }
   }
 
-  Future<void> _fetchProducts(int categoryId) async {
-    try {
-      setState(() {
-        _isLoading = true;
-      });
+  Future<void> _onSubcategorySelected(int subcategoryId) async {
+    setState(() {
+      _selectedSubcategoryId = subcategoryId;
+      _isLoading = true;
+      _products = [];
+    });
 
+    try {
       final response = await http.get(
-        Uri.parse('https://eclcommerce.ernestchemists.com.gh/api/products?category_id=$categoryId'),
+        Uri.parse('https://eclcommerce.ernestchemists.com.gh/api/product-categories/$subcategoryId'),
       );
 
       if (response.statusCode == 200) {
@@ -395,7 +398,7 @@ class _SubcategoryPageState extends State<SubcategoryPage> {
         } else {
           setState(() {
             _isLoading = false;
-            _errorMessage = 'Failed to load products';
+            _errorMessage = 'No products available';
           });
         }
       } else {
@@ -412,191 +415,203 @@ class _SubcategoryPageState extends State<SubcategoryPage> {
     }
   }
 
-  String _getProductImageUrl(String imagePath) {
-    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
-      return imagePath;
-    }
-    return 'https://eclcommerce.ernestchemists.com.gh/storage/$imagePath';
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.green.shade700,
-        elevation: 0,
-        centerTitle: true,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        ),
-        title: Text(
-          widget.categoryName,
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-        ),
+        title: Text(widget.categoryName),
         actions: [
           IconButton(
-            icon: Icon(Icons.shopping_cart, color: Colors.white),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const Cart(),
-                ),
-              );
-            },
+            icon: Icon(Icons.shopping_cart),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const Cart()),
+            ),
           ),
         ],
       ),
-      body: Row(
-        children: [
-          if (_subcategories.isNotEmpty)
-            SizedBox(
-              width: 120, // Reduced width for smaller chips
-              child: ListView.builder(
-                itemCount: _subcategories.length,
-                itemBuilder: (context, index) {
-                  final subcategory = _subcategories[index];
-                  return GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _selectedSubcategoryId = subcategory['id'];
-                      });
-                      if (subcategory['has_product_categories'] == false) {
-                        _fetchProducts(widget.categoryId);
-                      }
-                    },
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 3, vertical: 10),
-                      padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: _selectedSubcategoryId == subcategory['id']
-                            ? Colors.green.shade900 // Deep green when selected
-                            : Colors.green.shade100,
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                      child: Center(
-                        child: Text(
-                          subcategory['name'],
-                          style: TextStyle(
-                            fontSize: 10, // Smaller font size
-                            color: _selectedSubcategoryId == subcategory['id']
-                                ? Colors.white
-                                : Colors.green.shade900,
-                            fontWeight: FontWeight.w500, // Lighter font weight
-                          ),
-                          textAlign: TextAlign.center, // Center the text
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          Expanded(
-            child: _isLoading
-                ? Center(child: CircularProgressIndicator())
-                : _errorMessage.isNotEmpty
-                ? Center(child: Text(_errorMessage))
-                : _products.isEmpty
-                ? Center(child: Text("No products available"))
-                : GridView.builder(
-              padding: const EdgeInsets.all(12.0), // Reduced padding
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 8, // Increased spacing
-                mainAxisSpacing: 8, // Increased spacing
-                childAspectRatio: 1.1, // Increased aspect ratio
-              ),
-              itemCount: _products.length,
-              itemBuilder: (context, index) {
-                final product = _products[index];
-                return GestureDetector(
-                  child: Card(
-                    elevation: 0,
-                    color: Colors.transparent,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16), // Increased radius
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        SizedBox(
-                          height: 120, // Increased height
-                          width: double.infinity,
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.vertical(
-                              top: Radius.circular(16),
-                            ),
-                            child: Image.network(
-                              _getProductImageUrl(product['image']),
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  color: Colors.grey[200],
-                                  child: Icon(Icons.image_not_supported, color: Colors.grey),
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(12.0), // Increased padding
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                product['name'],
-                                style: TextStyle(
-                                  fontSize: 16, // Increased font size
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.grey.shade800,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
+        body: Row(
+          children: [
+            // Subcategories List
+            if (_subcategories.isNotEmpty)
+              Container(
+                width: 140,
+                color: Colors.grey.shade100,
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: ListView.builder(
+                  itemCount: _subcategories.length,
+                  itemBuilder: (context, index) {
+                    final subcategory = _subcategories[index];
+                    final isSelected = _selectedSubcategoryId == subcategory['id'];
+                    return InkWell(
+                      onTap: () => _onSubcategorySelected(subcategory['id']),
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        margin: EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                        padding: EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: isSelected ? Colors.green.shade800 : Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            if (isSelected)
+                              BoxShadow(
+                                color: Colors.green.shade200,
+                                blurRadius: 4,
+                                offset: Offset(0, 2),
                               ),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          ],
+                        ),
+                        child: Center(
+                          child: Text(
+                            subcategory['name'],
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: isSelected ? Colors.white : Colors.green.shade900,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+
+            // Product Grid
+            // Product Grid
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: _isLoading
+                    ? Center(child: CircularProgressIndicator())
+                    : _errorMessage.isNotEmpty
+                    ? Center(
+                  child: Text(
+                    _errorMessage,
+                    style: TextStyle(color: Colors.red),
+                  ),
+                )
+                    : _products.isEmpty
+                    ? Center(
+                  child: Text(
+                    "No products available",
+                    style: TextStyle(fontSize: 16, color: Colors.grey),
+                  ),
+                )
+                    : GridView.builder(
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    childAspectRatio: 0.35,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                  ),
+                  itemCount: _products.length,
+                  itemBuilder: (context, index) {
+                    final product = _products[index];
+                    return GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ItemPage(urlName: product.urlName),
+                          ),
+                        );
+                      },
+                      child: Card(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 3,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+
+                            Container(
+                              height: 200, // 🔄 was 180
+                              child: ClipRRect(
+                                borderRadius:
+                                BorderRadius.vertical(top: Radius.circular(12)),
+                                child: Image.network(
+                                  product['thumbnail'] ?? '',
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, _) =>
+                                      Icon(Icons.broken_image, size: 48),
+                                ),
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.all(10.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    "GHS ${product['price']}",
+                                    product['name'],
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
-                                      fontSize: 16, // Increased font size
-                                      color: Colors.green.shade700,
-                                      fontWeight: FontWeight.w600,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
                                     ),
                                   ),
-                                  IconButton(
-                                    onPressed: () {
-                                      // ... (same as before)
-                                    },
-                                    icon: Icon(
-                                      Icons.add_shopping_cart,
-                                      color: Colors.green,
-                                      size: 20.0, // Increased icon size
+                                  SizedBox(height: 6),
+                                  Align(
+                                    alignment: Alignment.bottomRight,
+                                    child: IconButton(
+                                      icon: Icon(Icons.add_shopping_cart,
+                                          color: Colors.green.shade700),
+                                      onPressed: () async {
+                                        try {
+                                          final response = await http.get(
+                                              Uri.parse(product['route']));
+                                          if (response.statusCode == 200) {
+                                            final details =
+                                            json.decode(response.body);
+                                            if (details['success'] == true) {
+                                              final productData = details['data'];
+                                              final newItem = CartItem(
+                                                id: product['id'].toString(),
+                                                name: product['name'],
+                                                price: productData['price']
+                                                    ?.toDouble() ??
+                                                    0.0,
+                                                image: product['thumbnail'] ?? '',
+                                                quantity: 1,
+                                              );
+                                              context
+                                                  .read<CartProvider>()
+                                                  .addToCart(newItem);
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(SnackBar(
+                                                  content:
+                                                  Text("Added to cart")));
+                                            }
+                                          }
+                                        } catch (e) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                                content:
+                                                Text("Failed to add to cart")),
+                                          );
+                                        }
+                                      },
                                     ),
                                   ),
                                 ],
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                  ),
-                );
-              },
+                      ),
+                    );
+                  },
+                ),
+              ),
             ),
-          ),
-        ],
-      ),
-      bottomNavigationBar: const CustomBottomNav(currentIndex: 2),
+
+          ],
+        )
+
     );
   }
 }
@@ -772,7 +787,7 @@ class ProductListPage extends StatelessWidget {
           }
         },
       ),
-      bottomNavigationBar: const CustomBottomNav(currentIndex: 2),
+      bottomNavigationBar: const CustomBottomNav(),
     );
   }
 

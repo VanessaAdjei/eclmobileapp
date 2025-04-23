@@ -1,4 +1,3 @@
-import 'package:eclapp/pages/protectedroute.dart';
 import 'package:eclapp/pages/signinpage.dart';
 import 'package:eclapp/pages/storelocation.dart';
 import 'package:flutter/material.dart';
@@ -13,6 +12,7 @@ import 'bottomnav.dart';
 import 'cartprovider.dart';
 import 'clickableimage.dart';
 import 'itemdetail.dart';
+import 'package:shimmer/shimmer.dart';
 import 'dart:async';
 
 class HomePage extends StatefulWidget {
@@ -25,6 +25,7 @@ class _HomePageState extends State<HomePage> {
   List<Product> filteredProducts = [];
   bool _isLoading = false;
   final RefreshController _refreshController = RefreshController();
+  bool _allContentLoaded = false;
 
 
 
@@ -118,6 +119,25 @@ class _HomePageState extends State<HomePage> {
   }
 
 
+  Future<void> _loadAllContent() async {
+    if (_allContentLoaded) return;
+
+    setState(() => _allContentLoaded = false);
+    try {
+      await Future.wait([
+        loadProducts(),
+        // Add other async operations if needed
+        Future.delayed(Duration(milliseconds: 300)), // Minimum skeleton display time
+      ]);
+    } catch (e) {
+      // Handle error
+    } finally {
+      if (mounted) {
+        setState(() => _allContentLoaded = true);
+      }
+    }
+  }
+
   Future<void> loadProducts() async {
     try {
       setState(() => _isLoading = true);
@@ -200,7 +220,8 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    loadProducts();
+    // loadProducts();
+    _loadAllContent();
     searchController.addListener(() {
       _filterProducts(searchController.text);
     });
@@ -625,12 +646,18 @@ class _HomePageState extends State<HomePage> {
   }
 
 
-
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
-        children: [
-          SmartRefresher(
+      body: _allContentLoaded ? _buildMainContent() : _buildOptimizedSkeleton(),
+      bottomNavigationBar: _allContentLoaded ? const CustomBottomNav() : null,
+    );
+  }
+
+
+  Widget _buildMainContent() {
+    return Stack(
+      children: [
+        SmartRefresher(
             controller: _refreshController,
             onRefresh: loadProducts,
             header: CustomHeader(
@@ -819,10 +846,391 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
         ],
+      );
+  }
+  Widget _buildOptimizedSkeleton() {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey[300]!,
+      highlightColor: Colors.grey[100]!,
+      child: SingleChildScrollView(
+        child: Column(
+          children: [
+            // AppBar placeholder
+            Container(
+              height: kToolbarHeight + MediaQuery.of(context).padding.top,
+              color: Colors.white,
+            ),
+
+            // Search bar
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Container(
+                height: 50,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+
+            // Banner carousel
+            Container(
+              height: 150,
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+
+            // Action cards
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: List.generate(3, (index) => Container(
+                  width: (MediaQuery.of(context).size.width - 48) / 3,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                )),
+              ),
+            ),
+
+            // Product grid
+            GridView.builder(
+              physics: NeverScrollableScrollPhysics(),
+              shrinkWrap: true,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              itemCount: 4,
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                childAspectRatio: 0.8,
+                mainAxisSpacing: 8,
+                crossAxisSpacing: 8,
+              ),
+              itemBuilder: (context, index) => _buildProductSkeleton(),
+            ),
+
+            // Promotional banner
+            Container(
+              height: 120,
+              margin: const EdgeInsets.all(16),
+              color: Colors.white,
+            ),
+
+            // Second product grid
+            GridView.builder(
+              physics: NeverScrollableScrollPhysics(),
+              shrinkWrap: true,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              itemCount: 4,
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                childAspectRatio: 0.8,
+                mainAxisSpacing: 8,
+                crossAxisSpacing: 8,
+              ),
+              itemBuilder: (context, index) => _buildProductSkeleton(),
+            ),
+
+            // Popular products header
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Container(
+                width: 150,
+                height: 24,
+                color: Colors.white,
+              ),
+            ),
+
+            // Popular products list
+            SizedBox(
+              height: 120,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.only(left: 16),
+                itemCount: 5,
+                itemBuilder: (context, index) => Padding(
+                  padding: const EdgeInsets.only(right: 16),
+                  child: Container(
+                    width: 80,
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+            // Third product grid
+            GridView.builder(
+              physics: NeverScrollableScrollPhysics(),
+              shrinkWrap: true,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              itemCount: 4,
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                childAspectRatio: 0.8,
+                mainAxisSpacing: 8,
+                crossAxisSpacing: 8,
+              ),
+              itemBuilder: (context, index) => _buildProductSkeleton(),
+            ),
+          ],
+        ),
       ),
-      bottomNavigationBar: const CustomBottomNav(currentIndex: 0),
+    );
+  }
+
+  Widget _buildProductSkeleton() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AspectRatio(
+            aspectRatio: 1,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: double.infinity,
+                  height: 16,
+                  color: Colors.white,
+                ),
+                const SizedBox(height: 4),
+                Container(
+                  width: 100,
+                  height: 14,
+                  color: Colors.white,
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  width: 60,
+                  height: 16,
+                  color: Colors.white,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
 }
 
+
+class HomePageSkeleton extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Shimmer.fromColors(
+        baseColor: Colors.grey[300]!,
+        highlightColor: Colors.grey[100]!,
+        child: CustomScrollView(
+          slivers: [
+            // AppBar Skeleton
+            SliverAppBar(
+              expandedHeight: 50.0,
+              floating: false,
+              pinned: true,
+              flexibleSpace: FlexibleSpaceBar(
+                title: Container(
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                ),
+              ),
+            ),
+
+            // Search Bar Skeleton
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.all(16),
+                child: Container(
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            ),
+
+            // Banner Carousel Skeleton
+            SliverToBoxAdapter(
+              child: Container(
+                height: 150,
+                margin: EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+
+            // Action Cards Skeleton
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: List.generate(3, (index) => Container(
+                    width: 100,
+                    height: 100,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  )),
+                ),
+              ),
+            ),
+
+            // First Product Grid Skeleton
+            SliverGrid(
+              delegate: SliverChildBuilderDelegate(
+                    (context, index) => _buildProductCardSkeleton(),
+                childCount: 4,
+              ),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                childAspectRatio: 0.8,
+              ),
+            ),
+
+            // Promotional Banner Skeleton
+            SliverToBoxAdapter(
+              child: Container(
+                height: 120,
+                margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+
+            // Second Product Grid Skeleton
+            SliverGrid(
+              delegate: SliverChildBuilderDelegate(
+                    (context, index) => _buildProductCardSkeleton(),
+                childCount: 4,
+              ),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                childAspectRatio: 0.8,
+              ),
+            ),
+
+            // Popular Products Header
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                child: Container(
+                  width: 150,
+                  height: 24,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+
+            // Popular Products Horizontal List
+            SliverToBoxAdapter(
+              child: Container(
+                height: 120,
+                margin: EdgeInsets.only(left: 16),
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: 5,
+                  itemBuilder: (context, index) => Padding(
+                    padding: EdgeInsets.only(right: 16),
+                    child: Container(
+                      width: 80,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+            // Third Product Grid Skeleton
+            SliverGrid(
+              delegate: SliverChildBuilderDelegate(
+                    (context, index) => _buildProductCardSkeleton(),
+                childCount: 4,
+              ),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                childAspectRatio: 0.8,
+              ),
+            ),
+          ],
+        ),
+      ),
+      bottomNavigationBar: Container(
+        height: 60,
+        color: Colors.white,
+      ),
+    );
+  }
+
+  Widget _buildProductCardSkeleton() {
+    return Container(
+      margin: EdgeInsets.all(8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+          SizedBox(height: 8),
+          Container(
+            width: double.infinity,
+            height: 16,
+            color: Colors.white,
+          ),
+          SizedBox(height: 4),
+          Container(
+            width: 80,
+            height: 14,
+            color: Colors.white,
+          ),
+          SizedBox(height: 8),
+          Container(
+            width: 60,
+            height: 16,
+            color: Colors.white,
+          ),
+        ],
+      ),
+    );
+  }
+}

@@ -78,7 +78,7 @@ class _MyAppState extends State<MyApp> {
           '/': (context) => HomePage(),
           '/cart': (context) => ProtectedRoute(child: const Cart()),
           '/categories': (context) => CategoryPage(),
-          '/profile': (context) => ProtectedRoute(child: const Profile()),
+          '/profile': (context) =>  Profile(),
           '/aboutus': (context) => AboutUsScreen(),
           '/signin': (context) => SignInScreen(),
           '/privacypolicy': (context) => PrivacyPolicyScreen(),

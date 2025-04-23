@@ -11,6 +11,7 @@ import 'auth_service.dart';
 import 'bottomnav.dart';
 import 'cartprovider.dart';
 import 'package:html/parser.dart' show parse;
+import 'package:shimmer/shimmer.dart';
 
 class ItemPage extends StatefulWidget {
   final String urlName;
@@ -275,15 +276,14 @@ class _ItemPageState extends State<ItemPage> {
         title: FutureBuilder<Product>(
           future: _productFuture,
           builder: (context, snapshot) {
-            if (snapshot.hasData) {
-              return Text(
-                snapshot.data!.name,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black,
-                ),
-              );
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return ItemPageSkeleton();
+            }
+            if (snapshot.hasError) {
+              return Center(child: Text('Error: ${snapshot.error}'));
+            }
+            if (!snapshot.hasData) {
+              return const Center(child: Text('No product data available'));
             }
             return const Text('Loading...');
           },
@@ -366,17 +366,17 @@ class _ItemPageState extends State<ItemPage> {
                   ),
                 ),
 
-                if (product.category.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
-                    child: Chip(
-                      label: Text(
-                        product.category,
-                        style: const TextStyle(color: Colors.white),
-                      ),
-                      backgroundColor: Colors.green.shade700,
-                    ),
-                  ),
+                // if (product.category.isNotEmpty)
+                //   Padding(
+                //     padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
+                //     child: Chip(
+                //       label: Text(
+                //         product.category,
+                //         style: const TextStyle(color: Colors.white),
+                //       ),
+                //       backgroundColor: Colors.green.shade700,
+                //     ),
+                //   ),
 
                 Center(
                   child: Material(
@@ -419,7 +419,7 @@ class _ItemPageState extends State<ItemPage> {
                     ),
                   ),
                 ),
-
+                const SizedBox(height: 5),
                 Material(
                   elevation: 4,
                   borderRadius: BorderRadius.circular(12),
@@ -661,7 +661,264 @@ class _ItemPageState extends State<ItemPage> {
           );
         },
       ),
-      bottomNavigationBar: const CustomBottomNav(currentIndex: 1),
+      bottomNavigationBar: const CustomBottomNav(),
+    );
+  }
+}
+
+
+class ItemPageSkeleton extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.grey[300],
+        elevation: 0,
+        leading: Container(
+          margin: const EdgeInsets.all(8.0),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.grey[400],
+          ),
+          child: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () {},
+          ),
+        ),
+        title: Container(
+          width: 200,
+          height: 24,
+          color: Colors.white,
+        ),
+        actions: [
+          Container(
+            margin: const EdgeInsets.only(right: 8.0),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.grey[400],
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.shopping_cart, color: Colors.white),
+              onPressed: () {},
+            ),
+          ),
+        ],
+      ),
+      body: Shimmer.fromColors(
+        baseColor: Colors.grey[300]!,
+        highlightColor: Colors.grey[100]!,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.only(left: 10, right: 10, top: 1, bottom: 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Product Image Skeleton
+              Container(
+                height: 200,
+                margin: const EdgeInsets.symmetric(vertical: 10),
+                color: Colors.white,
+              ),
+
+              // Category Chip Skeleton
+              Container(
+                width: 100,
+                height: 24,
+                margin: const EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+
+              // Quantity Selector Skeleton
+              Material(
+                elevation: 2,
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey),
+                    borderRadius: BorderRadius.circular(10),
+                    color: Colors.white,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 24,
+                        height: 24,
+                        color: Colors.white,
+                      ),
+                      const SizedBox(width: 16),
+                      Container(
+                        width: 24,
+                        height: 24,
+                        color: Colors.white,
+                      ),
+                      const SizedBox(width: 16),
+                      Container(
+                        width: 24,
+                        height: 24,
+                        color: Colors.white,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Product Details Card Skeleton
+              Material(
+                elevation: 4,
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Product Name Skeleton
+                      Container(
+                        width: double.infinity,
+                        height: 24,
+                        color: Colors.white,
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Price Skeleton
+                      Center(
+                        child: Container(
+                          width: 100,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Product Details Title Skeleton
+                      Center(
+                        child: Container(
+                          width: 120,
+                          height: 20,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const Divider(height: 24, thickness: 1),
+                      const SizedBox(height: 8),
+
+                      // Description Skeleton
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: List.generate(
+                          5,
+                              (index) => Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: Container(
+                              width: index == 4 ? 100 : double.infinity,
+                              height: 16,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Total and Add to Cart Buttons Skeleton
+              Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      height: 50,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Container(
+                      height: 50,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 24),
+
+              // Related Products Title Skeleton
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Container(
+                  width: 150,
+                  height: 24,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Related Products List Skeleton
+              SizedBox(
+                height: 180,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: 3,
+                  itemBuilder: (context, index) {
+                    return Container(
+                      width: 150,
+                      margin: const EdgeInsets.only(left: 10, right: 10),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            width: double.infinity,
+                            height: 16,
+                            color: Colors.white,
+                          ),
+                          const SizedBox(height: 4),
+                          Container(
+                            width: 80,
+                            height: 14,
+                            color: Colors.white,
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
+        ),
+      ),
+      bottomNavigationBar: Container(
+        height: 60,
+        color: Colors.white,
+      ),
     );
   }
 }

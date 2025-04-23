@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:eclapp/pages/homepage.dart';
 import 'package:eclapp/pages/signinpage.dart';
 import 'auth_service.dart';
@@ -292,7 +291,7 @@ class _CartState extends State<Cart> {
                 _buildCheckoutSection(cart),
               ],
             ),
-            bottomNavigationBar: const CustomBottomNav(currentIndex: 1),
+            bottomNavigationBar: const CustomBottomNav(),
           ),
         );
       },
