@@ -73,6 +73,7 @@ class _ItemPageState extends State<ItemPage> {
     showTopSnackBar(context, '${product.name} added to cart');
   }
 
+
   Widget _buildDescriptionSection(String? description) {
     final cleanText = description != null
         ? _cleanHtml(description).trim()
@@ -88,14 +89,22 @@ class _ItemPageState extends State<ItemPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          displayText,
-          style: _descriptionTextStyle(),
+        GestureDetector(
+          onTap: () {
+            setState(() {
+              isDescriptionExpanded = !isDescriptionExpanded;
+            });
+          },
+          child: Text(
+            displayText,
+            style: _descriptionTextStyle(),
+          ),
         ),
         if (isLong) _buildReadMoreButton(),
       ],
     );
   }
+
 
   Widget _buildReadMoreButton() {
     return Align(
