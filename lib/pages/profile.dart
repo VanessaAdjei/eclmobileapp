@@ -105,18 +105,7 @@ class _ProfileState extends State<Profile> {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async {
-        debugPrint("Back button pressed. Navigating to HomePage...");
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => HomePage()),
-              (route) => false,
-        );
-        return Future.value(false);
-      },
-
-      child: Scaffold(
+    return  Scaffold(
         appBar: AppBar(
           backgroundColor: Colors.green.shade700,
           elevation: 0,
@@ -184,7 +173,6 @@ class _ProfileState extends State<Profile> {
           ),
         ),
         bottomNavigationBar: const CustomBottomNav(),
-      ),
     );
   }
 

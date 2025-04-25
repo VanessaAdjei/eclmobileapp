@@ -282,21 +282,21 @@ class _ItemPageState extends State<ItemPage> {
             onPressed: () => Navigator.pop(context),
           ),
         ),
-        title: FutureBuilder<Product>(
-          future: _productFuture,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return ItemPageSkeleton();
-            }
-            if (snapshot.hasError) {
-              return Center(child: Text('Error: ${snapshot.error}'));
-            }
-            if (!snapshot.hasData) {
-              return const Center(child: Text('No product data available'));
-            }
-            return const Text('Loading...');
-          },
-        ),
+        // title: FutureBuilder<Product>(
+        //   future: _productFuture,
+        //   builder: (context, snapshot) {
+        //     if (snapshot.connectionState == ConnectionState.waiting) {
+        //       return ItemPageSkeleton();
+        //     }
+        //     if (snapshot.hasError) {
+        //       return Center(child: Text('Error: ${snapshot.error}'));
+        //     }
+        //     if (!snapshot.hasData) {
+        //       return const Center(child: Text('No product data available'));
+        //     }
+        //     return const Text('Loading...');
+        //   },
+        // ),
         actions: [
           Container(
             margin: const EdgeInsets.only(right: 8.0),

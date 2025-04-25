@@ -97,12 +97,7 @@ class _CategoryPageState extends State<CategoryPage> {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async {
-        Navigator.pop(context);
-        return Future.value(true);
-      },
-      child: Scaffold(
+    return  Scaffold(
         appBar: AppBar(
           backgroundColor: Colors.green.shade700,
           elevation: 0,
@@ -116,7 +111,16 @@ class _CategoryPageState extends State<CategoryPage> {
             child: IconButton(
               icon: Icon(Icons.arrow_back, color: Colors.white),
               onPressed: () {
-                Navigator.pop(context);
+                if (Navigator.of(context).canPop()) {
+                  Navigator.pop(context);
+                }
+                else {
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (context) => HomePage()),
+                        (route) => false,
+                  );
+                }
               },
             ),
           ),
@@ -227,8 +231,7 @@ class _CategoryPageState extends State<CategoryPage> {
           ),
         ),
         bottomNavigationBar: const CustomBottomNav(),
-      ),
-    );
+      );
   }
 }
 

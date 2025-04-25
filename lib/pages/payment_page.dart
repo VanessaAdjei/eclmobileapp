@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'bottomnav.dart';
 import 'cartprovider.dart';
 import 'homepage.dart';
 
@@ -23,7 +24,7 @@ class _PaymentPageState extends State<PaymentPage> {
     {
       'name': 'Card',
       'icon': Icons.credit_card,
-      'description': 'Pay with Visa, Mastercard, or other debit/credit card',
+      'description': 'Pay with a debit/credit card',
     },
     {
       'name': 'Cash on Delivery',
@@ -36,7 +37,8 @@ class _PaymentPageState extends State<PaymentPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Payment'),
+        backgroundColor: Colors.green.shade700,
+        title: const Text('Payment',    style: TextStyle(color: Colors.white),),
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -50,7 +52,7 @@ class _PaymentPageState extends State<PaymentPage> {
       body: Consumer<CartProvider>(
         builder: (context, cart, child) {
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(5),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -72,7 +74,10 @@ class _PaymentPageState extends State<PaymentPage> {
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(4),
+                      ),
                     ),
                     onPressed: () {
                       // Process payment and complete order
@@ -85,7 +90,11 @@ class _PaymentPageState extends State<PaymentPage> {
                             (route) => false,
                       );
                     },
-                    child: const Text('COMPLETE ORDER'),
+                    child: const Text(
+                      'CONTINUE TO PAYMENT',
+                      style: TextStyle(color: Colors.white),
+                    ),
+
                   ),
                 ),
               ],
@@ -93,18 +102,21 @@ class _PaymentPageState extends State<PaymentPage> {
           );
         },
       ),
+      bottomNavigationBar: const CustomBottomNav(),
     );
   }
 
   Widget _buildProgressIndicator() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          _buildProgressStep('Cart', isActive: false),
-          _buildProgressStep('Delivery', isActive: false),
-          _buildProgressStep('Payment', isActive: true),
+          _buildProgressStep("Delivery", isActive: false),
+          _buildArrow(),
+          _buildProgressStep("Payment", isActive: true),
+          _buildArrow(),
+          _buildProgressStep("Confirmation", isActive: false),
         ],
       ),
     );
@@ -116,7 +128,7 @@ class _PaymentPageState extends State<PaymentPage> {
         Text(
           text,
           style: TextStyle(
-            color: isActive ? Colors.green : Colors.grey,
+            color: isActive ? Colors.white : Colors.grey,
             fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
           ),
         ),
@@ -124,11 +136,24 @@ class _PaymentPageState extends State<PaymentPage> {
         Container(
           height: 2,
           width: 50,
-          color: isActive ? Colors.green : Colors.grey[300],
+          color: isActive ? Colors.white : Colors.grey[300],
         ),
       ],
     );
   }
+
+  Widget _buildArrow() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+      child: Icon(
+        Icons.arrow_forward,
+        color: Colors.grey[400],
+        size: 20,
+      ),
+    );
+  }
+
+
 
   Widget _buildPaymentMethods() {
     return Column(
@@ -292,6 +317,7 @@ class OrderConfirmationPage extends StatelessWidget {
           ],
         ),
       ),
+      bottomNavigationBar: const CustomBottomNav(),
     );
   }
 }

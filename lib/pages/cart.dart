@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:eclapp/pages/homepage.dart';
-import 'package:eclapp/pages/signinpage.dart';
-import 'auth_service.dart';
 import 'bottomnav.dart';
 import 'cartprovider.dart';
 import 'delivery_page.dart';
@@ -121,16 +119,6 @@ class _CartState extends State<Cart> {
     });
   }
 
-
-  Future<void> _checkAuthStatus() async {
-    final isLoggedIn = await AuthService.isLoggedIn();
-    if (!isLoggedIn && context.mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => SignInScreen(returnTo: '/cart')),
-      );
-    }
-  }
   void _handleCheckout(BuildContext context) {
     if (context.read<CartProvider>().cartItems.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -158,7 +146,12 @@ class _CartState extends State<Cart> {
       builder: (context, cart, child) {
         return Scaffold(
           appBar: AppBar(
-            title: const Text('Your Cart'),
+            backgroundColor: Colors.green.shade700,
+            elevation: 0,
+            title: const Text(
+              'Your Cart',
+              style: TextStyle(color: Colors.white),
+            ),
             centerTitle: true,
             leading: IconButton(
               icon: const Icon(Icons.arrow_back),
@@ -183,6 +176,7 @@ class _CartState extends State<Cart> {
               _buildStickyCheckoutBar(cart),
             ],
           ),
+          bottomNavigationBar: const CustomBottomNav(),
         );
       },
     );
@@ -191,14 +185,27 @@ class _CartState extends State<Cart> {
 
   Widget _buildProgressIndicator() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          _buildProgressStep('Cart', isActive: true),
-          _buildProgressStep('Delivery', isActive: false),
-          _buildProgressStep('Payment', isActive: false),
+          _buildProgressStep("Delivery", isActive: false),
+          _buildArrow(),
+          _buildProgressStep("Payment", isActive: false),
+          _buildArrow(),
+          _buildProgressStep("Confirmation", isActive: false),
         ],
+      ),
+    );
+  }
+
+  Widget _buildArrow() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+      child: Icon(
+        Icons.arrow_forward,
+        color: Colors.grey[400],
+        size: 20,
       ),
     );
   }
@@ -209,7 +216,7 @@ class _CartState extends State<Cart> {
         Text(
           text,
           style: TextStyle(
-            color: isActive ? Colors.green : Colors.grey,
+            color: isActive ? Colors.white : Colors.grey,
             fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
           ),
         ),
@@ -217,7 +224,7 @@ class _CartState extends State<Cart> {
         Container(
           height: 2,
           width: 50,
-          color: isActive ? Colors.green : Colors.grey[300],
+          color: isActive ? Colors.white : Colors.grey[300],
         ),
       ],
     );
@@ -236,8 +243,23 @@ class _CartState extends State<Cart> {
           ),
           const SizedBox(height: 16),
           ElevatedButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Continue Shopping'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+            onPressed: () {
+              // Navigate to sign-in screen
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => HomePage(),
+                ),
+              );
+            },
+            child: const Text('Continue Shopping',     style: TextStyle(color: Colors.white),),
           ),
         ],
       ),
@@ -304,9 +326,8 @@ class _CartState extends State<Cart> {
                               onPressed: () {
                                 if (item.quantity > 1) {
                                   cart.updateQuantity(index, item.quantity - 1);
-                                } else {
-                                  cart.removeFromCart(index);
                                 }
+                                // Do nothing if quantity is already 1
                               },
                             ),
                             Text(item.quantity.toString()),
@@ -349,7 +370,6 @@ class _CartState extends State<Cart> {
       ),
       child: Column(
         children: [
-          // Promo Code Field
           Row(
             children: [
               Expanded(
@@ -366,7 +386,7 @@ class _CartState extends State<Cart> {
               ),
               const SizedBox(width: 8),
               ElevatedButton(
-                onPressed: () {}, // Add promo code logic
+                onPressed: () {},
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.grey[200],
                   foregroundColor: Colors.black,
@@ -380,38 +400,9 @@ class _CartState extends State<Cart> {
           // Delivery Options
           Row(
             mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              const Text(
-                'DELIVERY OPTION:',
-                style: TextStyle(fontSize: 10),
-              ),
-              const SizedBox(width: 1),
-              Expanded(
-                child: ChoiceChip(
-                  label: const Text(
-                    'Home Delivery',
-                    style: TextStyle(fontSize: 12),
-                  ),
-                  selected: deliveryOption == 'Delivery',
-                  onSelected: (selected) => _handleDeliveryOptionChange('Delivery'),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: ChoiceChip(
-                  label: const Text(
-                    'Pickup Station',
-                    style: TextStyle(fontSize: 12),
-                  ),
-                  selected: deliveryOption == 'Pickup',
-                  onSelected: (selected) => _handleDeliveryOptionChange('Pickup'),
-                ),
-              ),
-            ],
           )
 ,
           const SizedBox(height: 12),
-
           // Order Summary
           _buildOrderSummary(cart),
           const SizedBox(height: 12),
@@ -422,7 +413,10 @@ class _CartState extends State<Cart> {
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.green,
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(4),
+                ),
               ),
     onPressed: () {
     Navigator.push(
@@ -430,7 +424,7 @@ class _CartState extends State<Cart> {
     MaterialPageRoute(builder: (context) => const DeliveryPage()),
     );
     },
-              child: const Text('PROCEED TO CHECKOUT'),
+              child: const Text('PROCEED TO CHECKOUT', style: TextStyle(color: Colors.white),),
             ),
           ),
         ],
@@ -481,191 +475,6 @@ class _CartState extends State<Cart> {
 
 
 
-  Widget _buildCheckoutSection(CartProvider cart) {
-    List<String> pickupLocations = [
-      'Madina Mall',
-      'Accra Mall',
-      'Kumasi City Mall',
-      'Takoradi Mall',
-    ];
-
-
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
-            spreadRadius: 2,
-            blurRadius: 6,
-            offset: const Offset(0, -1),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text('Shipping:', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-              _buildRadioButton('Delivery'),
-              _buildRadioButton('Pickup'),
-            ],
-          ),
-
-          // **Delivery Address or Pickup Location**
-          if (deliveryOption == 'Delivery') ...[
-            _buildRegionDropdown(),
-            _buildCityDropdown(),
-            _buildTownDropdown(),
-          ] else ...[
-            DropdownButtonFormField<String>(
-              decoration: const InputDecoration(labelText: 'Pickup Location'),
-              value: selectedTown,
-              items: pickupLocations.map((location) {
-                return DropdownMenuItem(value: location, child: Text(location, style: const TextStyle(fontSize: 14)));
-              }).toList(),
-              onChanged: (value) => setState(() => selectedTown = value),
-            ),
-          ],
-
-          const SizedBox(height: 5),
-
-          _buildPriceDetails(cart),
-
-          const SizedBox(height: 10),
-
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              onPressed: () => _handleCheckout(context),
-              child: const Text('Checkout', style: TextStyle(fontSize: 16, color: Colors.white)),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-
-
-
-  Widget _buildRadioButton(String value) {
-    return Row(
-      children: [
-        Radio<String>(
-          value: value,
-          groupValue: deliveryOption,
-          onChanged: (newValue) => _handleDeliveryOptionChange(newValue!),
-        ),
-        Text(value),
-      ],
-    );
-  }
-
-
-  Widget _buildAddressField() {
-    return TextField(
-      controller: addressController,
-      decoration: InputDecoration(
-        labelText: 'Enter your address',
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        filled: true,
-        fillColor: Colors.grey.shade100,
-      ),
-    );
-  }
-
-  Widget _buildPriceDetails(CartProvider cart) {
-    double subtotal = cart.calculateSubtotal();
-    double total = subtotal + (deliveryOption == 'Delivery' ? deliveryFee : 0.00);
-
-    return Column(
-      children: [
-        _buildPriceRow('Subtotal', subtotal),
-        if (deliveryOption == 'Delivery' && selectedTown != null)
-          _buildPriceRow('Delivery Fee', deliveryFee, color: Colors.grey.shade800),
-        _buildPriceRow('Total', total, isBold: true, color: Colors.green.shade800),
-      ],
-    );
-  }
-
-
-
-  Widget _buildPriceRow(String label, double amount, {bool isBold = false, Color? color}) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(label, style: TextStyle(fontSize: 16, fontWeight: isBold ? FontWeight.bold : FontWeight.w600)),
-        Text('\₵${amount.toStringAsFixed(2)}', style: TextStyle(fontSize: 16, fontWeight: isBold ? FontWeight.bold : FontWeight.normal, color: color)),
-      ],
-    );
-  }
-
-  Widget _buildRegionDropdown() {
-    return DropdownButtonFormField<String>(
-      decoration: InputDecoration(labelText: 'Select Region'),
-      value: selectedRegion,
-      items: regions.map((region) {
-        return DropdownMenuItem(value: region, child: Text(region));
-      }).toList(),
-      onChanged: (value) {
-        setState(() {
-          selectedRegion = value;
-          selectedCity = null;
-          selectedTown = null;
-        });
-      },
-    );
-  }
-
-
-  Widget _buildCityDropdown() {
-    return DropdownButtonFormField<String>(
-      decoration: InputDecoration(labelText: 'Select City'),
-      value: selectedCity,
-      items: (selectedRegion != null && cities.containsKey(selectedRegion))
-          ? cities[selectedRegion]!.map((city) {
-        return DropdownMenuItem(value: city, child: Text(city));
-      }).toList()
-          : [],
-      onChanged: (value) {
-        setState(() {
-          selectedCity = value;
-          selectedTown = null;
-        });
-      },
-    );
-  }
-
-
-  Widget _buildTownDropdown() {
-    return DropdownButtonFormField<String>(
-      decoration: InputDecoration(labelText: 'Select Town'),
-      value: selectedTown,
-      items: (selectedCity != null && towns.containsKey(selectedCity))
-          ? towns[selectedCity]!.map((town) {
-        return DropdownMenuItem(value: town, child: Text(town));
-      }).toList()
-          : [],
-      onChanged: (value) {
-        setState(() {
-          selectedTown = value;
-          if (selectedRegion != null && selectedCity != null && selectedTown != null) {
-            deliveryFee = locationFees[selectedRegion]?[selectedCity]?[selectedTown] ?? 0.00;
-          }
-        });
-      },
-
-    );
-  }
 
 
 

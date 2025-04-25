@@ -179,7 +179,10 @@ class AuthService {
       final response = await http.post(
         Uri.parse('$baseUrl/login'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'email': email, 'password': password}),
+        body: jsonEncode({
+          'email': email,
+          'password': hashPassword(password),
+        }),
       );
 
       final responseData = json.decode(response.body);

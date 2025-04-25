@@ -120,4 +120,9 @@ class CartProvider with ChangeNotifier {
       notifyListeners();
     }
   }
+
+
+  int get totalItems => _cartItems.fold(0, (sum, item) => sum + item.quantity);
+
+
 }

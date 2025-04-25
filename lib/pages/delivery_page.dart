@@ -1,10 +1,15 @@
+import 'dart:convert';
+
 import 'package:eclapp/pages/payment_page.dart';
+import 'package:eclapp/pages/savedaddresses.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'bottomnav.dart';
 import 'cartprovider.dart';
 
 class DeliveryPage extends StatefulWidget {
@@ -27,6 +32,10 @@ class _DeliveryPageState extends State<DeliveryPage> {
   bool isLoadingLocation = false;
   bool _isMapReady = false;
   Position? currentPosition;
+  List<SavedAddress> savedAddresses = [];
+  String? selectedRegion;
+  String? selectedCity;
+  List<String> availableStations = [];
 
   @override
   void dispose() {
@@ -35,6 +44,13 @@ class _DeliveryPageState extends State<DeliveryPage> {
     _phoneController.dispose();
     _notesController.dispose();
     super.dispose();
+  }
+
+
+  @override
+  void initState() {
+    super.initState();
+    loadSavedAddresses();
   }
 
   double _calculateDeliveryFee(LatLng location) {
@@ -175,7 +191,8 @@ class _DeliveryPageState extends State<DeliveryPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Delivery Information'),
+        backgroundColor: Colors.green.shade700,
+        title: const Text('Delivery Information',    style: TextStyle(color: Colors.white),),
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -215,22 +232,37 @@ class _DeliveryPageState extends State<DeliveryPage> {
           );
         },
       ),
+      bottomNavigationBar: const CustomBottomNav(),
     );
   }
 
   Widget _buildProgressIndicator() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          _buildProgressStep('Cart', isActive: false),
-          _buildProgressStep('Delivery', isActive: true),
-          _buildProgressStep('Payment', isActive: false),
+          _buildProgressStep("Delivery", isActive: true),
+          _buildArrow(),
+          _buildProgressStep("Payment", isActive: false),
+          _buildArrow(),
+          _buildProgressStep("Confirmation", isActive: false),
         ],
       ),
     );
   }
+
+  Widget _buildArrow() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+      child: Icon(
+        Icons.arrow_forward,
+        color: Colors.grey[400],
+        size: 20,
+      ),
+    );
+  }
+
 
   Widget _buildProgressStep(String text, {bool isActive = false}) {
     return Column(
@@ -238,7 +270,7 @@ class _DeliveryPageState extends State<DeliveryPage> {
         Text(
           text,
           style: TextStyle(
-            color: isActive ? Colors.green : Colors.grey,
+            color: isActive ? Colors.white : Colors.grey,
             fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
           ),
         ),
@@ -349,82 +381,130 @@ class _DeliveryPageState extends State<DeliveryPage> {
           ),
         ),
         const SizedBox(height: 16),
+        if (savedAddresses.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: DropdownButtonFormField<SavedAddress>(
+              isExpanded: true,
+              decoration: const InputDecoration(
+                labelText: "Use Saved Address",
+                border: OutlineInputBorder(),
+              ),
+              items: savedAddresses.map((addr) {
+                return DropdownMenuItem(
+                  value: addr,
+                  child: Text(addr.address),
+                );
+              }).toList(),
+              onChanged: (selected) {
+                if (selected != null) {
+                  setState(() {
+                    selectedLocation = selected.location;
+                    selectedAddress = selected.address;
+                    _typeAheadController.text = selected.address;
+                    markers = {
+                      Marker(
+                        markerId: const MarkerId('deliveryLocation'),
+                        position: selected.location,
+                        infoWindow: InfoWindow(title: selected.address),
+                        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+                      )
+                    };
+                    deliveryFee = _calculateDeliveryFee(selected.location);
+                  });
+
+                  if (_isMapReady) {
+                    mapController?.animateCamera(
+                      CameraUpdate.newLatLngZoom(selected.location, 15),
+                    );
+                  }
+                }
+              },
+            ),
+          ),
+
         Container(
           margin: const EdgeInsets.symmetric(horizontal: 16),
           child: SizedBox(
             height: 250,
-            child: AbsorbPointer(
-              absorbing: !_isMapReady || isLoadingLocation,
-              child: Stack(
-                children: [
-                  GoogleMap(
-                    initialCameraPosition: CameraPosition(
-                      target: currentPosition != null
-                          ? LatLng(currentPosition!.latitude, currentPosition!.longitude)
-                          : const LatLng(5.6037, -0.1870),
-                      zoom: 12,
-                    ),
-                    onMapCreated: (controller) {
-                      mapController = controller;
-                      setState(() => _isMapReady = true);
-                      if (currentPosition != null) {
-                        controller.animateCamera(
-                          CameraUpdate.newLatLngZoom(
-                            LatLng(
-                              currentPosition!.latitude,
-                              currentPosition!.longitude,
-                            ),
-                            15,
-                          ),
-                        );
-                      }
-                    },
-                    markers: markers,
-                    myLocationEnabled: true,
-                    myLocationButtonEnabled: false,
-                    zoomControlsEnabled: false,
-                    onTap: (latLng) async {
-                      try {
-                        final placemarks = await placemarkFromCoordinates(
-                          latLng.latitude,
-                          latLng.longitude,
-                        );
-
-                        if (placemarks.isNotEmpty && mounted) {
-                          final place = placemarks.first;
-                          final address = [
-                            place.street,
-                            place.locality,
-                            place.administrativeArea
-                          ].where((s) => s?.isNotEmpty ?? false).join(', ');
-
-                          setState(() {
-                            _typeAheadController.text = address;
-                            selectedLocation = latLng;
-                            selectedAddress = address;
-                            markers = {
-                              Marker(
-                                markerId: const MarkerId('selected_location'),
-                                position: latLng,
-                                infoWindow: InfoWindow(title: address),
-                              )
-                            };
-                            deliveryFee = _calculateDeliveryFee(latLng);
-                          });
-                        }
-                      } catch (e) {
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Error: ${e.toString()}')),
-                          );
-                        }
-                      }
-                    },
+            child: Stack(
+              children: [
+                GoogleMap(
+                  initialCameraPosition: CameraPosition(
+                    target: currentPosition != null
+                        ? LatLng(currentPosition!.latitude, currentPosition!.longitude)
+                        : const LatLng(5.6037, -0.1870),
+                    zoom: 12,
                   ),
-                  if (!_isMapReady || isLoadingLocation)
-                    const Center(child: CircularProgressIndicator()),
-                ],
-              ),
+                  onMapCreated: (controller) {
+                    mapController = controller;
+                    setState(() => _isMapReady = true);
+                    if (currentPosition != null) {
+                      controller.animateCamera(
+                        CameraUpdate.newLatLngZoom(
+                          LatLng(
+                            currentPosition!.latitude,
+                            currentPosition!.longitude,
+                          ),
+                          15,
+                        ),
+                      );
+                    }
+                  },
+                  markers: markers,
+                  myLocationEnabled: true,
+                  myLocationButtonEnabled: false,
+                  zoomControlsEnabled: true, // Changed to true
+                  zoomGesturesEnabled: true, // Added this
+                  scrollGesturesEnabled: true, // Added this
+                  tiltGesturesEnabled: true, // Added this
+                  rotateGesturesEnabled: true, // Added this
+                  onTap: (latLng) async {
+                    try {
+                      final placemarks = await placemarkFromCoordinates(
+                        latLng.latitude,
+                        latLng.longitude,
+                      );
+
+                      if (placemarks.isNotEmpty && mounted) {
+                        final place = placemarks.first;
+                        final address = [
+                          place.street,
+                          place.locality,
+                          place.administrativeArea
+                        ].where((s) => s?.isNotEmpty ?? false).join(', ');
+
+                        setState(() {
+                          _typeAheadController.text = address;
+                          selectedLocation = latLng;
+                          selectedAddress = address;
+                          markers = {
+                            Marker(
+                              markerId: const MarkerId('selected_location'),
+                              position: latLng,
+                              infoWindow: InfoWindow(title: address),
+                            )
+                          };
+                          deliveryFee = _calculateDeliveryFee(latLng);
+                        });
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Error: ${e.toString()}')),
+                        );
+                      }
+                    }
+                  },
+                ),
+                if (!_isMapReady || isLoadingLocation)
+                  Positioned.fill(
+                    child: Container(
+                      color: Colors.black.withOpacity(0.3),
+                      child: const Center(child: CircularProgressIndicator()),
+                    ),
+                  ),
+              ],
             ),
           ),
         ),
@@ -460,6 +540,24 @@ class _DeliveryPageState extends State<DeliveryPage> {
   }
 
   Widget _buildPickupForm() {
+
+    final Map<String, Map<String, List<String>>> pickupLocations = {
+      'Greater Accra': {
+        'Accra': ['Accra Mall', 'West Hills Mall', 'Achimota Retail Centre'],
+        'Tema': ['Tema Mall', 'Community 25 Station']
+      },
+      'Ashanti': {
+        'Kumasi': ['Kumasi City Mall', 'Adum Station', 'Asokwa Station']
+      },
+      'Western': {
+        'Takoradi': ['Takoradi Mall', 'Airport Station']
+      },
+      'Eastern': {
+        'Madina': ['Madina Mall'],
+        'Koforidua': ['Koforidua Station']
+      }
+    };
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
@@ -470,29 +568,83 @@ class _DeliveryPageState extends State<DeliveryPage> {
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
           ),
           const SizedBox(height: 12),
+
+          // Region Dropdown
           DropdownButtonFormField<String>(
+            value: selectedRegion,
             decoration: const InputDecoration(
-              labelText: 'Select Pickup Station',
+              labelText: 'Select Region',
               border: OutlineInputBorder(),
+              filled: true,
+              fillColor: Colors.white,
             ),
-            items: [
-              'Madina Mall',
-              'Accra Mall',
-              'Kumasi City Mall',
-              'Takoradi Mall'
-            ].map((location) {
+            items: pickupLocations.keys.map((region) {
               return DropdownMenuItem(
-                value: location,
-                child: Text(location),
+                value: region,
+                child: Text(region),
               );
             }).toList(),
             onChanged: (value) {
               setState(() {
-                selectedAddress = value;
-                deliveryFee = 0.00;
+                selectedRegion = value;
+                selectedCity = null;
+                selectedAddress = null;
               });
             },
           ),
+
+          if (selectedRegion != null) ...[
+            const SizedBox(height: 12),
+            // City Dropdown
+            DropdownButtonFormField<String>(
+              value: selectedCity,
+              decoration: const InputDecoration(
+                labelText: 'Select City',
+                border: OutlineInputBorder(),
+                filled: true,
+                fillColor: Colors.white,
+              ),
+              items: pickupLocations[selectedRegion]!.keys.map((city) {
+                return DropdownMenuItem(
+                  value: city,
+                  child: Text(city),
+                );
+              }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  selectedCity = value;
+                  selectedAddress = null;
+                });
+              },
+            ),
+          ],
+
+          if (selectedCity != null) ...[
+            const SizedBox(height: 12),
+            // Station Dropdown
+            DropdownButtonFormField<String>(
+              value: selectedAddress,
+              decoration: const InputDecoration(
+                labelText: 'Select Pickup Station',
+                border: OutlineInputBorder(),
+                filled: true,
+                fillColor: Colors.white,
+              ),
+              items: pickupLocations[selectedRegion]![selectedCity]!.map((station) {
+                return DropdownMenuItem(
+                  value: station,
+                  child: Text(station),
+                );
+              }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  selectedAddress = value;
+                  deliveryFee = 0.00;
+                });
+              },
+            ),
+          ],
+
           const SizedBox(height: 12),
           const Text(
             'Pickup stations are open Monday-Saturday, 9am-6pm',
@@ -502,7 +654,6 @@ class _DeliveryPageState extends State<DeliveryPage> {
       ),
     );
   }
-
   Widget _buildContactInfo() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -606,15 +757,19 @@ class _DeliveryPageState extends State<DeliveryPage> {
 
   Widget _buildContinueButton() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 10),
       child: SizedBox(
         width: double.infinity,
         child: ElevatedButton(
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.green,
-            padding: const EdgeInsets.symmetric(vertical: 16),
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(4), // Change this to 0 for square corners
+            ),
           ),
-          onPressed: () {
+          onPressed: () async {
+            await saveCurrentAddress();
             if (deliveryOption == 'Delivery' && selectedAddress == null) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Please select a delivery address')),
@@ -643,11 +798,12 @@ class _DeliveryPageState extends State<DeliveryPage> {
               ),
             );
           },
-          child: const Text('CONTINUE TO PAYMENT'),
+          child: const Text('CONTINUE TO PAYMENT',     style: TextStyle(color: Colors.white),),
         ),
       ),
     );
   }
+
 
   void _handleDeliveryOptionChange(String option) {
     setState(() {
@@ -660,4 +816,42 @@ class _DeliveryPageState extends State<DeliveryPage> {
       }
     });
   }
+
+  Future<void> loadSavedAddresses() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedData = prefs.getStringList('saved_addresses') ?? [];
+
+    setState(() {
+      savedAddresses = savedData
+          .map((jsonStr) => SavedAddress.fromJson(json.decode(jsonStr)))
+          .toList();
+    });
+  }
+
+  Future<void> saveCurrentAddress() async {
+    if (selectedAddress == null || selectedLocation == null) return;
+
+    final newAddress = SavedAddress(
+      address: selectedAddress!,
+      location: selectedLocation!,
+    );
+
+    // Check if address already exists
+    bool addressExists = savedAddresses.any((addr) =>
+    addr.address == newAddress.address ||
+        (addr.location.latitude == newAddress.location.latitude &&
+            addr.location.longitude == newAddress.location.longitude)
+    );
+
+    if (!addressExists) {
+      setState(() {
+        savedAddresses.add(newAddress);
+      });
+
+      final prefs = await SharedPreferences.getInstance();
+      final savedData = savedAddresses.map((e) => json.encode(e.toJson())).toList();
+      await prefs.setStringList('saved_addresses', savedData);
+    }
+  }
+
 }

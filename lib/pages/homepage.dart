@@ -127,7 +127,7 @@ class _HomePageState extends State<HomePage> {
       await Future.wait([
         loadProducts(),
         // Add other async operations if needed
-        Future.delayed(Duration(milliseconds: 300)), // Minimum skeleton display time
+        Future.delayed(Duration(milliseconds: 500)), // Minimum skeleton display time
       ]);
     } catch (e) {
       // Handle error
@@ -220,7 +220,6 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    // loadProducts();
     _loadAllContent();
     searchController.addListener(() {
       _filterProducts(searchController.text);
