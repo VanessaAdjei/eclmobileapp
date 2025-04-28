@@ -190,51 +190,65 @@ class _DeliveryPageState extends State<DeliveryPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.green.shade700,
-        title: const Text('Delivery Information',    style: TextStyle(color: Colors.white),),
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(30),
-          child: _buildProgressIndicator(),
-        ),
-      ),
-      body: Consumer<CartProvider>(
-        builder: (context, cart, child) {
-          return Stack(
+      body: Stack(
+        children: [
+          Column(
             children: [
-              SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildDeliveryOptions(),
-                    const SizedBox(height: 16),
-                    if (deliveryOption == 'Delivery') _buildMapSection(),
-                    if (deliveryOption == 'Pickup') _buildPickupForm(),
-                    _buildContactInfo(),
-                    const SizedBox(height: 16),
-                    _buildDeliveryNotes(),
-                    const SizedBox(height: 20),
-                    _buildOrderSummary(cart),
-                    const SizedBox(height: 30),
-                    _buildContinueButton(),
-                    const SizedBox(height: 20),
-                  ],
+              AppBar(
+                backgroundColor: Colors.green.shade700,
+                centerTitle: true,
+                leading:IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  onPressed: () => Navigator.pop(context),
                 ),
               ),
-              if (isLoadingLocation)
-                const Center(child: CircularProgressIndicator()),
+              Expanded(
+                child: Consumer<CartProvider>(
+                  builder: (context, cart, child) {
+                    return Stack(
+                      children: [
+                        SingleChildScrollView(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildDeliveryOptions(),
+                              const SizedBox(height: 16),
+                              if (deliveryOption == 'Delivery') _buildMapSection(),
+                              if (deliveryOption == 'Pickup') _buildPickupForm(),
+                              _buildContactInfo(),
+                              const SizedBox(height: 16),
+                              _buildDeliveryNotes(),
+                              const SizedBox(height: 20),
+                              _buildOrderSummary(cart),
+                              const SizedBox(height: 30),
+                              _buildContinueButton(),
+                              const SizedBox(height: 20),
+                            ],
+                          ),
+                        ),
+                        if (isLoadingLocation)
+                          const Center(child: CircularProgressIndicator()),
+                      ],
+                    );
+                  },
+                ),
+              ),
             ],
-          );
-        },
+          ),
+
+          // Progress Indicator on top
+          Positioned(
+            top: 70,
+            left: 0,
+            right: 0,
+            child: _buildProgressIndicator(),
+          ),
+        ],
       ),
       bottomNavigationBar: const CustomBottomNav(),
     );
   }
+
 
   Widget _buildProgressIndicator() {
     return Padding(

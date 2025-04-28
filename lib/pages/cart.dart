@@ -145,35 +145,38 @@ class _CartState extends State<Cart> {
     return Consumer<CartProvider>(
       builder: (context, cart, child) {
         return Scaffold(
-          appBar: AppBar(
-            backgroundColor: Colors.green.shade700,
-            elevation: 0,
-            title: const Text(
-              'Your Cart',
-              style: TextStyle(color: Colors.white),
-            ),
-            centerTitle: true,
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back),
-              onPressed: () => Navigator.pop(context),
-            ),
-            bottom: PreferredSize(
-              preferredSize: const Size.fromHeight(30),
-              child: _buildProgressIndicator(),
-            ),
-          ),
-          body: Column(
+          body: Stack(
             children: [
-              Expanded(
-                child: cart.cartItems.isEmpty
-                    ? _buildEmptyCart()
-                    : ListView.builder(
-                  padding: const EdgeInsets.only(bottom: 100),
-                  itemCount: cart.cartItems.length,
-                  itemBuilder: (context, index) => _buildCartItem(cart, index),
-                ),
+              Column(
+                children: [
+                  AppBar(
+                    backgroundColor: Colors.green.shade700,
+                    elevation: 0,
+                    centerTitle: true,
+                    leading: IconButton(
+                      icon: const Icon(Icons.arrow_back, color: Colors.white),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ),
+                  Expanded(
+                    child: cart.cartItems.isEmpty
+                        ? _buildEmptyCart()
+                        : ListView.builder(
+                      padding: const EdgeInsets.only(bottom: 100),
+                      itemCount: cart.cartItems.length,
+                      itemBuilder: (context, index) => _buildCartItem(cart, index),
+                    ),
+                  ),
+                  _buildStickyCheckoutBar(cart),
+                ],
               ),
-              _buildStickyCheckoutBar(cart),
+
+              Positioned(
+                top: 70,
+                left: 0,
+                right: 0,
+                child: _buildProgressIndicator(),
+              ),
             ],
           ),
           bottomNavigationBar: const CustomBottomNav(),
@@ -181,6 +184,7 @@ class _CartState extends State<Cart> {
       },
     );
   }
+
 
 
   Widget _buildProgressIndicator() {

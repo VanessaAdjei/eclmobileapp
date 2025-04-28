@@ -36,75 +36,82 @@ class _PaymentPageState extends State<PaymentPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.green.shade700,
-        title: const Text('Payment',    style: TextStyle(color: Colors.white),),
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(30),
-          child: _buildProgressIndicator(),
-        ),
-      ),
-      body: Consumer<CartProvider>(
-        builder: (context, cart, child) {
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(5),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Payment Methods
-                _buildPaymentMethods(),
-                const SizedBox(height: 20),
-
-                // Save Payment Method Toggle
-                _buildSavePaymentToggle(),
-                const SizedBox(height: 20),
-
-                // Order Summary
-                _buildOrderSummary(cart),
-                const SizedBox(height: 30),
-
-                // Complete Order Button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
-                    onPressed: () {
-                      // Process payment and complete order
-                      cart.clearCart();
-                      Navigator.pushAndRemoveUntil(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const OrderConfirmationPage(),
-                        ),
-                            (route) => false,
-                      );
-                    },
-                    child: const Text(
-                      'CONTINUE TO PAYMENT',
-                      style: TextStyle(color: Colors.white),
-                    ),
-
-                  ),
+      body: Stack(
+        children: [
+          Column(
+            children: [
+              AppBar(
+                backgroundColor: Colors.green.shade700,
+                centerTitle: true,
+                leading:IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  onPressed: () => Navigator.pop(context),
                 ),
-              ],
-            ),
-          );
-        },
+                automaticallyImplyLeading: false,
+              ),
+
+              Expanded(
+                child: Consumer<CartProvider>(
+                  builder: (context, cart, child) {
+                    return SingleChildScrollView(
+                      padding: const EdgeInsets.all(5),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildPaymentMethods(),
+                          const SizedBox(height: 20),
+                          _buildSavePaymentToggle(),
+                          const SizedBox(height: 20),
+                          _buildOrderSummary(cart),
+                          const SizedBox(height: 30),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green,
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                              ),
+                              onPressed: () {
+                                cart.clearCart();
+                                Navigator.pushAndRemoveUntil(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const OrderConfirmationPage(),
+                                  ),
+                                      (route) => false,
+                                );
+                              },
+                              child: const Text(
+                                'CONTINUE TO PAYMENT',
+                                style: TextStyle(color: Colors.white),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+
+          // Positioned Progress Indicator at Top
+          Positioned(
+            top: 70,
+            left: 0,
+            right: 0,
+            child: _buildProgressIndicator(),
+          ),
+        ],
       ),
       bottomNavigationBar: const CustomBottomNav(),
     );
   }
+
 
   Widget _buildProgressIndicator() {
     return Padding(
