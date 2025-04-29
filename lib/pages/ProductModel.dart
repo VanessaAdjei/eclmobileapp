@@ -8,6 +8,7 @@ class Product {
   final String thumbnail;
   final String quantity;
   final String category;
+  final String? route;
 
   Product({
     required this.id,
@@ -19,6 +20,7 @@ class Product {
     required this.thumbnail,
     required this.quantity,
     required this.category,
+    required this.route,
   });
 
 
@@ -33,6 +35,7 @@ class Product {
       thumbnail: json['thumbnail'] ?? '',
       quantity: json['quantity'] ?? '',
       category: json['category'] ?? '',
+      route: json['route'],
     );
   }
 }

@@ -189,17 +189,25 @@ class _DeliveryPageState extends State<DeliveryPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Get the top padding (safe area)
+    final topPadding = MediaQuery.of(context).padding.top;
+
     return Scaffold(
       body: Stack(
         children: [
+          // Main content body
           Column(
             children: [
-              AppBar(
-                backgroundColor: Colors.green.shade700,
-                centerTitle: true,
-                leading:IconButton(
-                  icon: const Icon(Icons.arrow_back, color: Colors.white),
-                  onPressed: () => Navigator.pop(context),
+              PreferredSize(
+                preferredSize: Size.fromHeight(kToolbarHeight),
+                child: AppBar(
+                  backgroundColor: Colors.green.shade700,
+                  elevation: 0,
+                  centerTitle: true,
+                  leading: IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    onPressed: () => Navigator.pop(context),
+                  ),
                 ),
               ),
               Expanded(
@@ -236,9 +244,9 @@ class _DeliveryPageState extends State<DeliveryPage> {
             ],
           ),
 
-          // Progress Indicator on top
+          // Positioned Progress Indicator on top
           Positioned(
-            top: 70,
+            top: topPadding , // Top padding + AppBar height
             left: 0,
             right: 0,
             child: _buildProgressIndicator(),
@@ -248,6 +256,10 @@ class _DeliveryPageState extends State<DeliveryPage> {
       bottomNavigationBar: const CustomBottomNav(),
     );
   }
+
+
+
+
 
 
   Widget _buildProgressIndicator() {

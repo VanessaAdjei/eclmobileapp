@@ -1,15 +1,15 @@
 import 'package:eclapp/pages/profile.dart';
 import 'package:eclapp/pages/storelocation.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
 import 'dart:convert';
 import 'Cart.dart';
-import 'CartItem.dart';
+import 'ProductModel.dart';
 import 'bottomnav.dart';
-import 'cartprovider.dart';
 import 'homepage.dart';
 import 'itemdetail.dart';
+
 
 class CategoryPage extends StatefulWidget {
   @override
@@ -111,10 +111,11 @@ class _CategoryPageState extends State<CategoryPage> {
             child: IconButton(
               icon: Icon(Icons.arrow_back, color: Colors.white),
               onPressed: () {
-                if (Navigator.of(context).canPop()) {
+                // Improved navigation handling
+                if (Navigator.canPop(context)) {
                   Navigator.pop(context);
-                }
-                else {
+                } else {
+                  // Navigate to HomePage and clear stack if no routes to pop
                   Navigator.pushAndRemoveUntil(
                     context,
                     MaterialPageRoute(builder: (context) => HomePage()),
@@ -262,7 +263,7 @@ class CategoryGridItem extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             SizedBox(
-              height: 150,
+              height: 130,
               width: double.infinity,
               child: ClipRRect(
                 borderRadius: BorderRadius.vertical(top: Radius.circular(4)),
@@ -291,7 +292,7 @@ class CategoryGridItem extends StatelessWidget {
                       color: Colors.green.shade900,
                     ),
                     textAlign: TextAlign.left,
-                    maxLines: 2, 
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                   SizedBox(height: 4),
@@ -421,27 +422,28 @@ class _SubcategoryPageState extends State<SubcategoryPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.green.shade700,
-        title: Text(widget.categoryName),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.shopping_cart),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const Cart()),
+        appBar: AppBar(
+          backgroundColor: Colors.green.shade700,
+          automaticallyImplyLeading: true, // Ensures back button appears when needed
+          title: Text(widget.categoryName),
+          actions: [
+            IconButton(
+              icon: Icon(Icons.shopping_cart),
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const Cart()),
+              ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
         body: Row(
           children: [
             // Subcategories List
             if (_subcategories.isNotEmpty)
               Container(
-                width: 140,
+                width: 120,
                 color: Colors.grey.shade100,
-                padding: EdgeInsets.symmetric(vertical: 12),
+                padding: EdgeInsets.symmetric(vertical: 20),
                 child: ListView.builder(
                   itemCount: _subcategories.length,
                   itemBuilder: (context, index) {
@@ -472,6 +474,7 @@ class _SubcategoryPageState extends State<SubcategoryPage> {
                             style: TextStyle(
                               color: isSelected ? Colors.white : Colors.green.shade900,
                               fontWeight: FontWeight.w600,
+                              fontSize: 10,
                             ),
                           ),
                         ),
@@ -480,9 +483,6 @@ class _SubcategoryPageState extends State<SubcategoryPage> {
                   },
                 ),
               ),
-
-            // Product Grid
-            // Product Grid
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.all(12.0),
@@ -505,39 +505,48 @@ class _SubcategoryPageState extends State<SubcategoryPage> {
                     : GridView.builder(
                   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
-                    childAspectRatio: 0.35,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
+                    childAspectRatio: 0.65,
+                    crossAxisSpacing: 20,
+                    mainAxisSpacing: 15,
                   ),
                   itemCount: _products.length,
                   itemBuilder: (context, index) {
                     final product = _products[index];
+                    final itemDetailURL = product['inventory']?['url_name'] ??
+                        product['route']?.split('/').last;
                     return GestureDetector(
+                      // In your product list/grid items where navigation happens:
                       onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => ItemPage(urlName: product.urlName),
-                          ),
-                        );
+                        if (itemDetailURL != null) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ItemPage(urlName: itemDetailURL),
+                            ),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Could not load product details')),
+                          );
+                        }
                       },
                       child: Card(
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(5),
                         ),
-                        elevation: 3,
+                        elevation: 2,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
 
                             Container(
-                              height: 200, // 🔄 was 180
+                              height: 80,
                               child: ClipRRect(
                                 borderRadius:
                                 BorderRadius.vertical(top: Radius.circular(12)),
                                 child: Image.network(
                                   product['thumbnail'] ?? '',
-                                  fit: BoxFit.cover,
+                                  fit: BoxFit.fill,
                                   errorBuilder: (context, error, _) =>
                                       Icon(Icons.broken_image, size: 48),
                                 ),
@@ -560,45 +569,6 @@ class _SubcategoryPageState extends State<SubcategoryPage> {
                                   SizedBox(height: 6),
                                   Align(
                                     alignment: Alignment.bottomRight,
-                                    child: IconButton(
-                                      icon: Icon(Icons.add_shopping_cart,
-                                          color: Colors.green.shade700),
-                                      onPressed: () async {
-                                        try {
-                                          final response = await http.get(
-                                              Uri.parse(product['route']));
-                                          if (response.statusCode == 200) {
-                                            final details =
-                                            json.decode(response.body);
-                                            if (details['success'] == true) {
-                                              final productData = details['data'];
-                                              final newItem = CartItem(
-                                                id: product['id'].toString(),
-                                                name: product['name'],
-                                                price: productData['price']
-                                                    ?.toDouble() ??
-                                                    0.0,
-                                                image: product['thumbnail'] ?? '',
-                                                quantity: 1,
-                                              );
-                                              context
-                                                  .read<CartProvider>()
-                                                  .addToCart(newItem);
-                                              ScaffoldMessenger.of(context)
-                                                  .showSnackBar(SnackBar(
-                                                  content:
-                                                  Text("Added to cart")));
-                                            }
-                                          }
-                                        } catch (e) {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            SnackBar(
-                                                content:
-                                                Text("Failed to add to cart")),
-                                          );
-                                        }
-                                      },
-                                    ),
                                   ),
                                 ],
                               ),
@@ -619,9 +589,10 @@ class _SubcategoryPageState extends State<SubcategoryPage> {
   }
 }
 
-class ProductListPage extends StatelessWidget {
+class ProductListPage extends StatefulWidget {
   final String categoryName;
   final int categoryId;
+
 
   const ProductListPage({
     required this.categoryName,
@@ -629,12 +600,20 @@ class ProductListPage extends StatelessWidget {
   });
 
   @override
+  _ProductListPageState createState() => _ProductListPageState();
+}
+
+class _ProductListPageState extends State<ProductListPage> {
+  List<dynamic> _products = [];
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.green.shade700,
+        automaticallyImplyLeading: true,
         elevation: 0,
-        centerTitle: true,
+        centerTitle: false,
         leading: Container(
           margin: EdgeInsets.all(8.0),
           decoration: BoxDecoration(
@@ -644,41 +623,40 @@ class ProductListPage extends StatelessWidget {
           child: IconButton(
             icon: Icon(Icons.arrow_back, color: Colors.white),
             onPressed: () {
-              Navigator.pop(context);
+              // Improved navigation handling
+              if (Navigator.canPop(context)) {
+                Navigator.pop(context);
+              } else {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (context) => HomePage()),
+                      (route) => false,
+                );
+              }
             },
           ),
         ),
         title: Text(
-          categoryName,
+          widget.categoryName,
           style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
             color: Colors.black,
           ),
         ),
         actions: [
-          Container(
-            margin: EdgeInsets.only(right: 8.0),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.green[700],
-            ),
-            child: IconButton(
-              icon: Icon(Icons.shopping_cart, color: Colors.white),
-              onPressed: () {
+          IconButton(
+            icon: Icon(Icons.shopping_cart, color: Colors.black),
+            onPressed: () =>
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => const Cart(),
-                  ),
-                );
-              },
-            ),
+                  MaterialPageRoute(builder: (context) => const Cart()),
+                ),
           ),
         ],
       ),
       body: FutureBuilder<List<dynamic>>(
-        future: _fetchProducts(categoryId),
+        future: fetchProducts(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(child: CircularProgressIndicator());
@@ -688,42 +666,53 @@ class ProductListPage extends StatelessWidget {
             return Center(child: Text("No products available"));
           } else {
             return GridView.builder(
-              padding: const EdgeInsets.all(15.0),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              padding: const EdgeInsets.all(8.0),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
-                crossAxisSpacing: 4,
-                mainAxisSpacing: 0,
-                childAspectRatio: 0.93,
+                crossAxisSpacing: 12.0,
+                mainAxisSpacing: 12.0,
+                childAspectRatio: 0.7,
               ),
               itemCount: snapshot.data!.length,
               itemBuilder: (context, index) {
-                final product = snapshot.data![index];
+                final product = _products[index];
+                final itemDetailURL = product['inventory']?['url_name'] ??
+                    product['route']?.split('/').last;
                 return GestureDetector(
+
+                  onTap: () {
+                    if (itemDetailURL != null) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ItemPage(urlName: itemDetailURL),
+                        ),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Could not load product details')),
+                      );
+                    }
+                  },
                   child: Card(
-                    elevation: 0,
-                    color: Colors.transparent,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(5),
                     ),
+                    elevation: 2,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        SizedBox(
-                          height: 100,
-                          width: double.infinity,
+
+                        Container(
+                          height: 80,
                           child: ClipRRect(
-                            borderRadius: BorderRadius.vertical(
-                              top: Radius.circular(12),
-                            ),
+                            borderRadius:
+                            BorderRadius.vertical(top: Radius.circular(12)),
                             child: Image.network(
-                              _getProductImageUrl(product['image']),
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  color: Colors.grey[200],
-                                  child: Icon(Icons.image_not_supported, color: Colors.grey),
-                                );
-                              },
+                              product['thumbnail'] ?? '',
+                              fit: BoxFit.fill,
+                              errorBuilder: (context, error, _) =>
+                                  Icon(Icons.broken_image, size: 48),
                             ),
                           ),
                         ),
@@ -734,49 +723,16 @@ class ProductListPage extends StatelessWidget {
                             children: [
                               Text(
                                 product['name'],
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.grey.shade800,
-                                ),
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
                               ),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    "GHS ${product['price']}",
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.green.shade700,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  IconButton(
-                                    onPressed: () {
-                                      final newItem = CartItem(
-                                        id: product['id'].toString(),
-                                        name: product['name'],
-                                        price: product['price'].toDouble(),
-                                        image: product['image'],
-                                        quantity: 1,
-                                      );
-                                      context.read<CartProvider>().addToCart(newItem);
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text("Added to cart"),
-                                          duration: Duration(seconds: 2),
-                                        ),
-                                      );
-                                    },
-                                    icon: Icon(
-                                      Icons.add_shopping_cart,
-                                      color: Colors.green,
-                                      size: 18.0,
-                                    ),
-                                  ),
-                                ],
+                              SizedBox(height: 6),
+                              Align(
+                                alignment: Alignment.bottomRight,
                               ),
                             ],
                           ),
@@ -786,6 +742,8 @@ class ProductListPage extends StatelessWidget {
                   ),
                 );
               },
+
+
             );
           }
         },
@@ -794,28 +752,46 @@ class ProductListPage extends StatelessWidget {
     );
   }
 
-  Future<List<dynamic>> _fetchProducts(int categoryId) async {
+  Future<List<Product>> fetchProducts() async {
     try {
       final response = await http.get(
-        Uri.parse('https://eclcommerce.ernestchemists.com.gh/api/products?category_id=$categoryId'),
+        Uri.parse('https://eclcommerce.ernestchemists.com.gh/api/products'),
+        headers: {'Accept': 'application/json'},
       );
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        if (data['success'] == true) {
-          return data['data'];
-        }
+
+        // Debug logging
+        final rawProducts = data['data'] as List;
+        debugPrint('Total products from API: ${rawProducts.length}');
+        debugPrint('Products with null url_name: ${
+            rawProducts.where((p) => p['url_name'] == null).length
+        }');
+
+        // Filter and transform
+        return rawProducts
+            .where((item) => item['url_name'] != null)
+            .map((item) {
+          debugPrint('Creating product: ${item['id']} - ${item['url_name']}');
+          return Product.fromJson(item);
+        })
+            .toList();
+      } else {
+        throw Exception('API returned ${response.statusCode}');
       }
-      return [];
     } catch (e) {
-      throw Exception('Failed to load products');
+      debugPrint('Error fetching products: $e');
+      rethrow;
     }
   }
 
-  String _getProductImageUrl(String imagePath) {
-    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
-      return imagePath;
+  Future<void> _launchURL(String url) async {
+    if (await canLaunch(url)) {
+      await launch(url);
+    } else {
+      throw 'Could not launch $url';
     }
-    return 'https://eclcommerce.ernestchemists.com.gh/storage/$imagePath';
   }
-}
+
+  }

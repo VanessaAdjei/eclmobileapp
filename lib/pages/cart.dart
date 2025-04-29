@@ -107,34 +107,7 @@ class _CartState extends State<Cart> {
 
 
 
-  void _handleDeliveryOptionChange(String option) {
-    setState(() {
-      deliveryOption = option;
-      if (option == 'Pickup') {
-        selectedRegion = null;
-        selectedCity = null;
-        selectedTown = null;
-        deliveryFee = 0.00;
-      }
-    });
-  }
 
-  void _handleCheckout(BuildContext context) {
-    if (context.read<CartProvider>().cartItems.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Your cart is empty!")),
-      );
-      return;
-    }
-
-    context.read<CartProvider>().purchaseItems();
-
-    Future.delayed(Duration(milliseconds: 500), () {
-      context.read<CartProvider>().clearCart();
-    });
-
-    showTopSnackBar(context, 'Purchase Successful');
-  }
 
 
 
@@ -142,6 +115,8 @@ class _CartState extends State<Cart> {
 
   @override
   Widget build(BuildContext context) {
+    final topPadding = MediaQuery.of(context).padding.top;
+
     return Consumer<CartProvider>(
       builder: (context, cart, child) {
         return Scaffold(
@@ -149,13 +124,27 @@ class _CartState extends State<Cart> {
             children: [
               Column(
                 children: [
-                  AppBar(
-                    backgroundColor: Colors.green.shade700,
-                    elevation: 0,
-                    centerTitle: true,
-                    leading: IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Colors.white),
-                      onPressed: () => Navigator.pop(context),
+                  Container(
+                    padding: EdgeInsets.only(top: topPadding),
+                    color: Colors.green.shade700,
+                    child: Row(
+                      children: [
+                        // Expanded touch area with proper hit testing
+                        GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () {
+                            if (Navigator.of(context).canPop()) {
+                              Navigator.of(context).pop();
+                            }
+                          },
+                          child: Container(
+                            padding: EdgeInsets.all(12), // Minimum touch target size (48x48 recommended)
+                            child: Icon(Icons.arrow_back, color: Colors.white),
+                          ),
+                        ),
+                        const Spacer(),
+                        SizedBox(width: 48),
+                      ],
                     ),
                   ),
                   Expanded(
@@ -172,7 +161,7 @@ class _CartState extends State<Cart> {
               ),
 
               Positioned(
-                top: 70,
+                top: topPadding, // Dynamic safe area
                 left: 0,
                 right: 0,
                 child: _buildProgressIndicator(),
@@ -184,6 +173,7 @@ class _CartState extends State<Cart> {
       },
     );
   }
+
 
 
 
@@ -280,7 +270,6 @@ class _CartState extends State<Cart> {
       ),
       child: Row(
         children: [
-          // Product Image
           Container(
             width: 80,
             height: 80,
@@ -388,7 +377,7 @@ class _CartState extends State<Cart> {
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 5),
               ElevatedButton(
                 onPressed: () {},
                 style: ElevatedButton.styleFrom(
@@ -399,17 +388,17 @@ class _CartState extends State<Cart> {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
 
           // Delivery Options
           Row(
             mainAxisAlignment: MainAxisAlignment.start,
           )
 ,
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           // Order Summary
           _buildOrderSummary(cart),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
 
           // Checkout Button
           SizedBox(
@@ -466,7 +455,7 @@ class _CartState extends State<Cart> {
             ),
           ),
           Text(
-            '₵${value.toStringAsFixed(2)}',
+            'GH₵${value.toStringAsFixed(2)}',
             style: TextStyle(
               fontWeight: isHighlighted ? FontWeight.bold : FontWeight.normal,
               color: isHighlighted ? Colors.green : null,

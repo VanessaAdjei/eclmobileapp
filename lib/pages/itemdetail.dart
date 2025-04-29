@@ -192,6 +192,7 @@ class _ItemPageState extends State<ItemPage> {
         urlName: "paracetamol-500mg-tablets",
         status: "active",
         price: "5.99",
+        route: '',
         thumbnail: "https://eclcommerce.ernestchemists.com.gh/storage/paracetamol.jpg",
         quantity: "100",
         category: "Pain Relief",
@@ -206,6 +207,7 @@ class _ItemPageState extends State<ItemPage> {
         thumbnail: "https://eclcommerce.ernestchemists.com.gh/storage/ibuprofen.jpg",
         quantity: "80",
         category: "Pain Relief",
+        route: '',
       ),
       Product(
         id: 3,
@@ -217,6 +219,7 @@ class _ItemPageState extends State<ItemPage> {
         thumbnail: "https://eclcommerce.ernestchemists.com.gh/storage/vitamin-c.jpg",
         quantity: "50",
         category: "Vitamins",
+        route: '',
       ),
     ];
   }
@@ -271,32 +274,18 @@ class _ItemPageState extends State<ItemPage> {
         backgroundColor: Colors.green.shade700,
         elevation: 0,
         centerTitle: true,
-        leading: Container(
-          margin: const EdgeInsets.all(8.0),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: Colors.green[400],
+        leading: IconButton(
+          padding: EdgeInsets.zero, // Remove default padding
+          icon: Container(
+            margin: const EdgeInsets.all(8.0),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.green[400],
+            ),
+            child: const Icon(Icons.arrow_back, color: Colors.white),
           ),
-          child: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () => Navigator.pop(context),
-          ),
+          onPressed: () => Navigator.pop(context),
         ),
-        // title: FutureBuilder<Product>(
-        //   future: _productFuture,
-        //   builder: (context, snapshot) {
-        //     if (snapshot.connectionState == ConnectionState.waiting) {
-        //       return ItemPageSkeleton();
-        //     }
-        //     if (snapshot.hasError) {
-        //       return Center(child: Text('Error: ${snapshot.error}'));
-        //     }
-        //     if (!snapshot.hasData) {
-        //       return const Center(child: Text('No product data available'));
-        //     }
-        //     return const Text('Loading...');
-        //   },
-        // ),
         actions: [
           Container(
             margin: const EdgeInsets.only(right: 8.0),

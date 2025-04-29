@@ -65,6 +65,7 @@ class AuthService {
             thumbnail: productData['thumbnail'] ?? '',
             quantity: productData['quantity'] ?? '',
             category: productData['category'] ?? '',
+            route: productData['route'] ?? '',
           );
         }).toList();
 
@@ -96,6 +97,7 @@ class AuthService {
           urlName: productData['url_name'] ?? '',
           status: productData['status'] ?? '',
           category: productData['category'] ?? '',
+          route: productData['route'] ?? '',
           price: (productData['price'] ?? 0).toDouble(),
           thumbnail: productData['thumbnail'] ?? '',
           quantity: productData['qty_in_stock'] ?? 0,

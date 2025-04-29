@@ -65,10 +65,12 @@ class _MyAppState extends State<MyApp> {
         title: 'ECL App',
         themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
         theme: ThemeData(
+          fontFamily: 'Poppins',
           primarySwatch: Colors.green,
           brightness: Brightness.light,
         ),
         darkTheme: ThemeData(
+          fontFamily: 'Poppins',
           primarySwatch: Colors.green,
           brightness: Brightness.dark,
         ),

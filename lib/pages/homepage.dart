@@ -1,6 +1,7 @@
 import 'package:eclapp/pages/signinpage.dart';
 import 'package:eclapp/pages/storelocation.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -9,6 +10,7 @@ import 'CartItem.dart';
 import 'ProductModel.dart';
 import 'auth_service.dart';
 import 'bottomnav.dart';
+import 'cache.dart';
 import 'cartprovider.dart';
 import 'clickableimage.dart';
 import 'itemdetail.dart';
@@ -27,7 +29,8 @@ class _HomePageState extends State<HomePage> {
   final RefreshController _refreshController = RefreshController();
   bool _allContentLoaded = false;
 
-
+  final CacheService _cache = CacheService();
+  static const String _productsCacheKey = 'home_products';
 
 
   TextEditingController searchController = TextEditingController();
@@ -120,17 +123,23 @@ class _HomePageState extends State<HomePage> {
 
 
   Future<void> _loadAllContent() async {
-    if (_allContentLoaded) return;
+    if (_allContentLoaded && !_cache.shouldRefreshCache()) return;
 
     setState(() => _allContentLoaded = false);
     try {
       await Future.wait([
         loadProducts(),
-        // Add other async operations if needed
-        Future.delayed(Duration(milliseconds: 500)), // Minimum skeleton display time
+        Future.delayed(Duration(milliseconds: 500)),
       ]);
     } catch (e) {
-      // Handle error
+      // Try to show cached data if available
+      final cachedProducts = _cache.getCachedData(_productsCacheKey);
+      if (cachedProducts != null) {
+        setState(() {
+          products = cachedProducts;
+          filteredProducts = cachedProducts;
+        });
+      }
     } finally {
       if (mounted) {
         setState(() => _allContentLoaded = true);
@@ -141,7 +150,23 @@ class _HomePageState extends State<HomePage> {
   Future<void> loadProducts() async {
     try {
       setState(() => _isLoading = true);
+
+      // Check cache first
+      if (!_cache.shouldRefreshCache()) {
+        final cachedProducts = _cache.getCachedData(_productsCacheKey);
+        if (cachedProducts != null) {
+          setState(() {
+            products = cachedProducts;
+            filteredProducts = cachedProducts;
+          });
+          return;
+        }
+      }
+
+      // Fetch fresh data
       List<Product> loadedProducts = await AuthService().fetchProducts();
+      _cache.cacheData(_productsCacheKey, loadedProducts);
+
       setState(() {
         products = loadedProducts;
         filteredProducts = loadedProducts;
@@ -463,60 +488,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildOrderMedicineCard() {
-    List<String> imageUrls = [
-      'assets/images/ban1.png',
-      'assets/images/ban2.png',
-      'assets/images/ban1.png',
-    ];
 
-    PageController _pageController = PageController(viewportFraction: 0.85);
-
-    Timer? _timer;
-
-    @override
-    void initState() {
-      _timer = Timer.periodic(Duration(seconds: 8), (timer) {
-        if (_pageController.hasClients) {
-          int nextPage = (_pageController.page?.toInt() ?? 0) + 1;
-          if (nextPage >= imageUrls.length) nextPage = 0;
-          _pageController.animateToPage(
-            nextPage,
-            duration: Duration(milliseconds: 500),
-            curve: Curves.easeInOut,
-          );
-        }
-      });
-    }
-
-    @override
-    void dispose() {
-      _timer?.cancel();
-      _pageController.dispose();
-      super.dispose();
-    }
-
-    return Container(
-      height: 150,
-      padding: EdgeInsets.symmetric(vertical: 10),
-      child: PageView.builder(
-        controller: _pageController,
-        itemCount: imageUrls.length,
-        itemBuilder: (context, index) {
-          return Padding(
-            padding: EdgeInsets.symmetric(horizontal: 5),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.asset(
-                imageUrls[index],
-                fit: BoxFit.cover,
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
 
   Widget _buildProductCard(Product product) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -609,29 +581,6 @@ class _HomePageState extends State<HomePage> {
                             ),
                           ),
                         ),
-                        IconButton(
-                          onPressed: () async {
-                            await AuthService.protectedCartAction(
-                              context: context,
-                              product: product,
-                              onSuccess: () {
-                                // This will only be called if user is logged in
-                                final cartProvider = Provider.of<CartProvider>(context, listen: false);
-                                cartProvider.addToCart(
-                                  CartItem(
-                                    id: product.id.toString(),
-                                    name: product.name,
-                                    price: double.tryParse(product.price) ?? 0.0,
-                                    image: product.thumbnail,
-                                  ),
-                                );
-
-                                showTopSnackBar(context, 'Added to cart');
-                              },
-                            );
-                          },
-                          icon: Icon(Icons.add_shopping_cart),
-                        )
                       ],
                     ),
                   ],
@@ -659,20 +608,20 @@ class _HomePageState extends State<HomePage> {
         SmartRefresher(
             controller: _refreshController,
             onRefresh: loadProducts,
-            header: CustomHeader(
-              builder: (context, mode) {
-                return SizedBox(
-                  height: 60,
-                  child: Center(
-                    child: _isLoading
-                        ? CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.green[700]!),
-                    )
-                        : Icon(Icons.arrow_downward, color: Colors.green[700]),
-                  ),
-                );
-              },
-            ),
+            // header: CustomHeader(
+            //   builder: (context, mode) {
+            //     return SizedBox(
+            //       height: 60,
+            //       child: Center(
+            //         child: _isLoading
+            //             ? CircularProgressIndicator(
+            //           valueColor: AlwaysStoppedAnimation<Color>(Colors.green[700]!),
+            //         )
+            //             : Icon(Icons.arrow_downward, color: Colors.green[700]),
+            //       ),
+            //     );
+            //   },
+            // ),
             child: CustomScrollView(
               controller: _scrollController,
               slivers: [
@@ -710,7 +659,7 @@ class _HomePageState extends State<HomePage> {
                           mainAxisAlignment: MainAxisAlignment.start,
                           children: [
                             Padding(
-                              padding: const EdgeInsets.only(top: 60),
+                              padding: const EdgeInsets.only(top: 40),
                               child: SizedBox(
                                 height: 110,
                                 width: 100,
@@ -745,20 +694,50 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
                 SliverToBoxAdapter(
-                  child: _buildOrderMedicineCard(),
+                  child: buildOrderMedicineCard(),
                 ),
                 SliverToBoxAdapter(
                   child: _buildActionCards(),
                 ),
+                SliverList(
+                  delegate: SliverChildListDelegate(
+                    [
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 4,
+                              height: 24,
+                              color: Colors.green,
+                            ),
+                            SizedBox(width: 8),
+                            Text(
+                              'Medicine',
+                              style: GoogleFonts.poppins(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.green[700],
+                                letterSpacing: 1.2,
+                                height: 1.3,
+                              ),
+                            ),
+                          ],
+                        ),
+
+                      ),
+                    ],
+                  ),
+                ),
                 SliverGrid(
                   delegate: SliverChildBuilderDelegate(
                         (context, index) {
-                      if (index < 4) {
+                      if (index < 6) {
                         return _buildProductCard(filteredProducts[index]);
                       }
                       return SizedBox.shrink();
                     },
-                    childCount: filteredProducts.length > 4 ? 4 : filteredProducts.length,
+                    childCount: filteredProducts.length > 6 ? 6 : filteredProducts.length,
                   ),
                   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
@@ -767,22 +746,55 @@ class _HomePageState extends State<HomePage> {
                     childAspectRatio: 1.2,
                   ),
                 ),
+
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 1.0),
                     child: ClickableImageButton(),
                   ),
                 ),
+                SliverList(
+                  delegate: SliverChildListDelegate(
+                    [
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 4,
+                              height: 24,
+                              color: Colors.green, // Accent line on the left
+                            ),
+                            SizedBox(width: 8),
+                            Text(
+                              'First Aid',
+                              style: GoogleFonts.poppins(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.green[700],
+                                letterSpacing: 1.2,
+                                height: 1.3,
+                              ),
+                            ),
+                          ],
+                        ),
+
+                      ),
+                    ],
+                  ),
+                ),
                 SliverGrid(
                   delegate: SliverChildBuilderDelegate(
                         (context, index) {
-                      int adjustedIndex = index + 4;
-                      if (adjustedIndex < 8 && adjustedIndex < filteredProducts.length) {
+                      int adjustedIndex = index + 6;
+                      if (adjustedIndex < 12 && adjustedIndex < filteredProducts.length) {
                         return _buildProductCard(filteredProducts[adjustedIndex]);
                       }
                       return SizedBox.shrink();
                     },
-                    childCount: filteredProducts.length > 8 ? 4 : (filteredProducts.length > 4 ? filteredProducts.length - 4 : 0),
+                    childCount: filteredProducts.length > 12
+                        ? 6
+                        : (filteredProducts.length > 6 ? filteredProducts.length - 6 : 0),
                   ),
                   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
@@ -791,22 +803,53 @@ class _HomePageState extends State<HomePage> {
                     childAspectRatio: 1.2,
                   ),
                 ),
+
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.only(bottom: 1.0),
                     child: _buildPopularProducts(),
                   ),
                 ),
+                SliverList(
+                  delegate: SliverChildListDelegate(
+                    [
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 4,
+                              height: 24,
+                              color: Colors.green, // Accent line on the left
+                            ),
+                            SizedBox(width: 8),
+                            Text(
+                              'Other Products',
+                              style: GoogleFonts.poppins(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.green[700],
+                                letterSpacing: 1.2,
+                                height: 1.3,
+                              ),
+                            ),
+                          ],
+                        ),
+
+                      ),
+                    ],
+                  ),
+                ),
                 SliverGrid(
                   delegate: SliverChildBuilderDelegate(
                         (context, index) {
-                      int adjustedIndex = index + 8;
+                      int adjustedIndex = index + 12;
                       if (adjustedIndex < filteredProducts.length) {
                         return _buildProductCard(filteredProducts[adjustedIndex]);
                       }
                       return SizedBox.shrink();
                     },
-                    childCount: filteredProducts.length > 8 ? filteredProducts.length - 8 : 0,
+                    childCount: filteredProducts.length > 12 ? filteredProducts.length - 12 : 0,
                   ),
                   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
@@ -815,6 +858,7 @@ class _HomePageState extends State<HomePage> {
                     childAspectRatio: 1.2,
                   ),
                 ),
+
               ],
             ),
           ),
@@ -1229,6 +1273,73 @@ class HomePageSkeleton extends StatelessWidget {
             color: Colors.white,
           ),
         ],
+      ),
+    );
+  }
+}
+Widget buildOrderMedicineCard() => _OrderMedicineCard();
+
+class _OrderMedicineCard extends StatefulWidget {
+  @override
+  State<_OrderMedicineCard> createState() => _OrderMedicineCardState();
+}
+
+class _OrderMedicineCardState extends State<_OrderMedicineCard> {
+  final List<String> imageUrls = [
+    'assets/images/ban1.png',
+    'assets/images/ban2.png',
+    'assets/images/slide3.png',
+    'assets/images/slide4.png',
+  ];
+
+  late final PageController _pageController;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(viewportFraction: 0.85);
+
+    _timer = Timer.periodic(Duration(seconds: 10), (timer) {
+      if (_pageController.hasClients) {
+        int nextPage = (_pageController.page?.round() ?? 0) + 1;
+        if (nextPage >= imageUrls.length) nextPage = 0;
+        _pageController.animateToPage(
+          nextPage,
+          duration: Duration(milliseconds: 500),
+          curve: Curves.easeInOut,
+        );
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 150,
+      padding: EdgeInsets.symmetric(vertical: 10),
+      child: PageView.builder(
+        controller: _pageController,
+        itemCount: imageUrls.length,
+        itemBuilder: (context, index) {
+          return Padding(
+            padding: EdgeInsets.symmetric(horizontal: 5),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.asset(
+                imageUrls[index],
+                fit: BoxFit.cover,
+              ),
+            ),
+          );
+        },
       ),
     );
   }

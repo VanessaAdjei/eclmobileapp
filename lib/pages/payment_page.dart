@@ -35,21 +35,29 @@ class _PaymentPageState extends State<PaymentPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Get the top padding (safe area) to handle the status bar
+    final topPadding = MediaQuery.of(context).padding.top;
+
     return Scaffold(
       body: Stack(
         children: [
           Column(
             children: [
-              AppBar(
-                backgroundColor: Colors.green.shade700,
-                centerTitle: true,
-                leading:IconButton(
-                  icon: const Icon(Icons.arrow_back, color: Colors.white),
-                  onPressed: () => Navigator.pop(context),
+              // AppBar with adjustments for status bar height
+              Container(
+                height: kToolbarHeight + topPadding,  // This accounts for AppBar height and top safe area padding
+                child: AppBar(
+                  backgroundColor: Colors.green.shade700,
+                  centerTitle: true,
+                  leading: IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  automaticallyImplyLeading: false,
                 ),
-                automaticallyImplyLeading: false,
               ),
 
+              // Main content body (cart and payment details)
               Expanded(
                 child: Consumer<CartProvider>(
                   builder: (context, cart, child) {
@@ -99,9 +107,9 @@ class _PaymentPageState extends State<PaymentPage> {
             ],
           ),
 
-          // Positioned Progress Indicator at Top
+          // Positioned Progress Indicator above the AppBar
           Positioned(
-            top: 70,
+            top: topPadding,  // Adjusted to be exactly above the AppBar
             left: 0,
             right: 0,
             child: _buildProgressIndicator(),
@@ -111,6 +119,7 @@ class _PaymentPageState extends State<PaymentPage> {
       bottomNavigationBar: const CustomBottomNav(),
     );
   }
+
 
 
   Widget _buildProgressIndicator() {
@@ -224,7 +233,7 @@ class _PaymentPageState extends State<PaymentPage> {
           },
           activeColor: Colors.green,
         ),
-        const Text('Save this payment method for future purchases'),
+        const Text('Save this payment method '),
       ],
     );
   }
@@ -271,7 +280,7 @@ class _PaymentPageState extends State<PaymentPage> {
             ),
           ),
           Text(
-            '₵${value.toStringAsFixed(2)}',
+            'GH₵${value.toStringAsFixed(2)}',
             style: TextStyle(
               fontWeight: isHighlighted ? FontWeight.bold : FontWeight.normal,
               color: isHighlighted ? Colors.green : null,
@@ -296,7 +305,7 @@ class OrderConfirmationPage extends StatelessWidget {
             const Icon(Icons.check_circle, color: Colors.green, size: 80),
             const SizedBox(height: 20),
             const Text(
-              'Order Confirmed!',
+              'Order Placed!',
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
@@ -319,7 +328,7 @@ class OrderConfirmationPage extends StatelessWidget {
                       (route) => false,
                 );
               },
-              child: const Text('Back to Home'),
+              child: const Text('Back to Home',style: TextStyle(color: Colors.white),),
             ),
           ],
         ),
